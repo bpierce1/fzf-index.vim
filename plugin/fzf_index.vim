@@ -1,40 +1,54 @@
 " =============================================================================
 " File:          plugin/fzf_index.vim
-" Description:   CtrlP Most Recently Used Files source for FZF
-" Author:        Pawel Bogut <github.com/pbogut>
+" Description:   FZF + simple indexing
+" Author:        Brian Pierce <github.com/bpierce1>
 " =============================================================================
 
-if exists('g:fzf_index_loaded')
-  finish
-endif
-let g:fzf_index_loaded = 1
-
-let [g:fzf_index_lines, g:fzf_index_allfiles, g:fzf_index_alltags, g:fzf_index_alldirs,
-	\ g:fzf_index_allmixes, g:fzf_index_buftags, g:fzf_index_ext_vars, g:fzf_index_builtins]
-	\ = [[], [], [], [], {}, {}, [], 2]
-
-if !exists('g:fzf_index_map') | let g:fzf_index_map = '<c-p>' | en
-if !exists('g:fzf_index_cmd') | let g:fzf_index_cmd = 'fzf_index' | en
-
-" prepare params
-function! s:params(params)
-  let params = join(a:params, ' ')
-  if (len(params) && params[0] != '-')
-    let params = '-q ' . shellescape(params)
-  endif
-
-  return params
+function! s:fzf_index_cachefile() abort
+  return g:fzf_index_cache_dir . '/' . substitute(getcwd(), '/', '%', 'g')
 endfunction
 
-function! s:fzf_index(...) abort
+function! s:fzf_index() abort
+  " create directory
+  if !isdirectory(g:fzf_index_cache_dir)
+    silent! call mkdir(g:fzf_index_cache_dir, 'p')
+  endif
+
+  " get cache file path
+  let s:cache_file = s:fzf_index_cachefile()
+
+  " if file doesn't exist, run command
+  if !filereadable(s:cache_file)
+    silent execute "!" . g:fzf_index_user_command . " > " . fnameescape(s:cache_file)
+  endif
+
   let options = {
-        \   'source': fzf_index#init(0, { 'dir': a:0 }),
+        \   'source': 'cat ' . s:cache_file
         \ }
   let extra = extend(copy(get(g:, 'fzf_layout', {'down': '~40%'})), options)
 
   call fzf#run(fzf#wrap('name', extra, 0))
 endfunction
 
-command! -nargs=* FZFIndex call s:fzf_index(<q-args>)
-command! -bar FZFClearCache call fzf_index#clr()
+function! s:fzf_index_clear_cache() abort
+  let s:cache_file = s:fzf_index_cachefile()
+  if filereadable(s:cache_file)
+    silent execute "!" . 'rm ' . fnameescape(s:cache_file)
+  endif
+endfunction
 
+function! s:fzf_index_reindex() abort
+    call s:fzf_index_clear_cache()
+    call s:fzf_index()
+endfunction
+
+command! -nargs=* FZFIndex call s:fzf_index()
+command! -nargs=* FZFIndexClearCache call s:fzf_index_clear_cache()
+command! -nargs=* FZFIndexReindex call s:fzf_index_reindex()
+
+augroup autocom
+  if g:fzf_index_clear_cache_on_exit
+    autocmd!
+    autocmd VimLeave * call s:fzf_index_clear_cache()
+  endif
+augroup END
