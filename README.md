@@ -1,16 +1,13 @@
 # FZF + Indexing
 
 ## Description
-A very basic re-working of [CtrlP](https://github.com/kien/ctrlp.vim) to pull out
-the parts that build the list of files and keep track of it. 
-Probably could redo from scratch, but it was easy enough to copy from ctrlp.
+A very simple indexing tool for fzf. Useful if you have lots of files or if you have a directory mounted via sshfs and indexing is very slow.
 
-## Credits
+You have to provide a few definitions in your `.vimrc` for it to work:
 
-99% of code has been taken from [CtrlP](https://github.com/kien/ctrlp.vim).
+```vimrc
+let g:fzf_index_cache_dir = $HOME.'/.cache/fzf_index'
+let g:fzf_index_clear_cache_on_exit = 0
+let g:fzf_index_user_command = 'rg -L --no-ignore-vcs --ignore-file ~/.rgignore --files'
+```
 
-
-## License
-
-MIT License;
-The software is provided "as is", without warranty of any kind.
